@@ -20,14 +20,18 @@ def central_coordinator_router(user_query: str, image_bytes: bytes = None, mime_
         return flashcard_agent(user_query, image_bytes, mime_type)
         
     # 👶 3. COMPREHENSION & EXPLAINER ENGINE
-    elif any(k in query_lower for k in ["explain", "understand", "what is", "why", "how", "teach", "don't get it", "confused", "help"]):
+    elif any(k in query_lower for k in ["explain", "understand", "teach", "don't get it", "confused"]):
         return explainer_agent(user_query, image_bytes, mime_type)
+    
+    # 🤔 4. QUESTION ANSWERING & CLARITY ENGINE
+    elif any(k in query_lower for k in ["what is", "why", "how"]):
+        return qa_agent(user_query, image_bytes, mime_type)
         
-    # 📝 4. ACADEMIC COMPILATION NOTES ENGINE
+    # 📝 5. ACADEMIC COMPILATION NOTES ENGINE
     elif any(k in query_lower for k in ["summarize", "make note", "make notes", "bullet", "points", "summary", "notes"]):
         return notes_agent(user_query, image_bytes, mime_type)
         
-    # 🛰️ 5. CONTEXT STABILITY BACKUP LAYER
+    # 🛰️ 6. CONTEXT STABILITY BACKUP LAYER
     if active_tab == "quiz":
         return quiz_agent(user_query, image_bytes, mime_type)
     elif active_tab == "flashcard":
