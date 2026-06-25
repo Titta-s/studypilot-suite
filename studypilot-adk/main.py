@@ -1,4 +1,4 @@
-from config import client, MODEL_ID
+from config import client, ROUTER_MODEL_ID
 from agents import notes_agent, qa_agent, quiz_agent
 
 def central_coordinator_router(user_query: str, mock_database_context: str = "Cell biology basic structures notes.") -> str:
@@ -7,7 +7,7 @@ def central_coordinator_router(user_query: str, mock_database_context: str = "Ce
     Listens to the student, computes intent routing classification, 
     and hands execution over to the correct specialized target agent.
     """
-    print("\n⚡ [Central Coordinator] Computing intent routing logic from user space telemetry...")
+    print(f"\n⚡ [Central Coordinator] Computing intent routing logic from user space telemetry via {ROUTER_MODEL_ID}...")
     
     classification_prompt = f"""
     You are a classification specialist routing engine for a student application.
@@ -25,7 +25,7 @@ def central_coordinator_router(user_query: str, mock_database_context: str = "Ce
     
     # Low-latency intent classification evaluation pass
     route_decision = client.models.generate_content(
-        model=MODEL_ID,
+        model=ROUTER_MODEL_ID,
         contents=classification_prompt
     ).text.strip().upper()
     
@@ -33,8 +33,8 @@ def central_coordinator_router(user_query: str, mock_database_context: str = "Ce
     
     # Handoff multi-agent operational flow cleanly to selected target node
     if "QUIZ" in route_decision:
-        return quiz_agent(user_query, extracted_context=mock_database_context)
+        return quiz_agent(user_query, image_bytes=None, mime_type=None)
     elif "QA" in route_decision:
-        return qa_agent(user_query, vector_context=mock_database_context)
+        return qa_agent(user_query, image_bytes=None, mime_type=None)
     else:
-        return notes_agent(user_query, extracted_context=mock_database_context)
+        return notes_agent(user_query, image_bytes=None, mime_type=None)
