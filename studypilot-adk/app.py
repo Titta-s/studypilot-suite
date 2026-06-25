@@ -21,7 +21,12 @@ async def handle_agent_request(
 ):
     print(f"\n🛸 [Incoming Telemetry] Active Mode Segment: {active_tab} | Command: '{message}'")
     
-    clean_message = message.strip() if message else f"Analyze this layout context for {active_tab} parameters"
+    # ✨ THE FIX: Force empty prompts with images to automatically target the Explainer keyword!
+    if not message.strip() and file is not None:
+        clean_message = "Explain this image directly in simple terms"
+    else:
+        clean_message = message.strip() if message else f"Analyze this layout context for {active_tab} parameters"
+        
     image_bytes = None
     mime_type = None
 
@@ -31,7 +36,7 @@ async def handle_agent_request(
         mime_type = file.content_type  
 
     try:
-        # FIXED: Forwarding active_tab parameter into routing matrix evaluations
+        # Forwarding parameter matrix configurations smoothly into routing matrix evaluations
         agent_response = central_coordinator_router(
             user_query=clean_message,
             image_bytes=image_bytes,
