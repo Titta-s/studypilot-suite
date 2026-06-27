@@ -1,9 +1,21 @@
 import os
 from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
+
+from fastapi import Depends
+from firebase.firebase_auth import verify_firebase_token
+
 from router import central_coordinator_router
 
+from routes.notes import router as notes_router
+from routes.history import router as history_router
+
+from services.firestore_service import FirestoreService
+
 app = FastAPI(title="StudyPilot Multimodal Vision Engine API - Production", version="6.0")
+
+app.include_router(history_router)
+app.include_router(notes_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,7 +29,8 @@ app.add_middleware(
 async def handle_agent_request(
     message: str = Form(""),
     active_tab: str = Form("notes"),
-    file: UploadFile = File(None)
+    file: UploadFile = File(None),
+    user=Depends(verify_firebase_token)
 ):
     print(f"\n🛸 [Incoming Telemetry] Active Mode Segment: {active_tab} | Command: '{message}'")
     
@@ -43,6 +56,16 @@ async def handle_agent_request(
             mime_type=mime_type,
             active_tab=active_tab
         )
+
+        # Save the agent response to Firestore
+        FirestoreService.save_agent_response(
+            uid=user["uid"],
+            agent=active_tab,
+            query=clean_message,
+            response=agent_response,
+            image_uploaded=file is not None
+        )
+        
     except Exception as server_err:
         print(f"❌ Server Runtime Exception: {server_err}")
         agent_response = "🛸 An operational error occurred in the vision core matrix."
