@@ -54,6 +54,7 @@ export default function Chatbot({ username, onLogout }) {
     const formData = new FormData();
     formData.append('message', userQuery);
     formData.append('active_tab', activeTab);
+    
     if (attachedFile) formData.append('file', attachedFile);
 
     try {

@@ -14,3 +14,6 @@ studypilot-adk/temp_uploads/
 # Ignore frontend build and dependency folders
 studypilot-frontend/node_modules/
 studypilot-frontend/dist/
+
+#Ignore firebase key file
+firebase/firebase_key.json 
