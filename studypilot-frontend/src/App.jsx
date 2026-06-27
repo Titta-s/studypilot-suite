@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import Login from './components/Login';
 import SignUp from './components/SignUp';
 import Chatbot from './components/Chatbot';
-import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { auth } from "./firebase";
 
 export default function App() {
   // Application Screen Routing: 'login', 'signup', or 'dashboard'
@@ -11,37 +9,17 @@ export default function App() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLoginSubmit = async (e) => {
-  e.preventDefault();
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    if (!username || !password) return alert('🚀 Captain, missing launch credentials!');
+    setCurrentScreen('dashboard');
+  };
 
-  if (!username || !password) {
-    return alert("🚀 Captain, missing launch credentials!");
-  }
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      username,
-      password
-    );
-
-    // Save the logged-in user if needed later
-    // console.log(userCredential.user);
-    const token = await userCredential.user.getIdToken();
-    localStorage.setItem("firebaseToken", token);
-    
-    setCurrentScreen("dashboard");
-
-  } catch (error) {
-    alert(error.message);
-  }};
-  const handleLogout = async () => {
-
-  await signOut(auth);
-
-  setCurrentScreen("login");
-  setUsername("");
-  setPassword("");};
+  const handleLogout = () => {
+    setCurrentScreen('login');
+    setUsername('');
+    setPassword('');
+  };
 
   // Switch workspace layout viewframes dynamically based on active status routing criteria
   switch (currentScreen) {

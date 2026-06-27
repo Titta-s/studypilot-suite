@@ -1,38 +1,15 @@
 import React, { useState } from 'react';
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
 
 export default function SignUp({ onNavigateToLogin }) {
   const [newUsername, setNewUsername] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  const handleSignUp = async (e) => {
+  const handleRegisterSubmit = (e) => {
     e.preventDefault();
-
-    if (!email || !newPassword) {
-        alert("Please fill all required fields.");
-        return;
-    }
-
-    try {
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            newPassword
-        );
-
-        console.log(userCredential.user);
-
-        alert("Account created successfully!");
-
-        onNavigateToLogin();
-
-    } catch (error) {
-        console.error(error);
-        alert(`${error.code}\n${error.message}`);
-    }
-};
+    alert(`🎉 Account created successfully for Cadet ${newUsername}! Returning to launchpad.`);
+    onNavigateToLogin();
+  };
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-br from-indigo-900 via-slate-900 to-purple-950 flex flex-col justify-center items-center font-sans antialiased p-4 selection:bg-pink-500/30">
@@ -45,7 +22,7 @@ export default function SignUp({ onNavigateToLogin }) {
           <p className="text-xs font-bold text-indigo-300 tracking-widest mt-1 uppercase">Create Your Space Passport 🧑‍🚀</p>
         </div>
 
-        <form onSubmit={handleSignUp}className="space-y-4">
+        <form onSubmit={handleRegisterSubmit} className="space-y-4">
           <div>
             <label className="block mb-1.5 text-xs font-black uppercase tracking-widest text-yellow-400 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
               🛸 Chosen Username
