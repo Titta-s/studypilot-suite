@@ -1,13 +1,5 @@
 # 🚀 StudyPilot – AI-Powered Learning Assistant
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.14-blue?style=for-the-badge&logo=python" />
-  <img src="https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi" />
-  <img src="https://img.shields.io/badge/React-Frontend-61DAFB?style=for-the-badge&logo=react" />
-  <img src="https://img.shields.io/badge/Firebase-Firestore-FFCA28?style=for-the-badge&logo=firebase" />
-  <img src="https://img.shields.io/badge/Google-Gemini_AI-4285F4?style=for-the-badge&logo=google" />
-</p>
-
 ## 📖 Overview
 
 **StudyPilot** is an AI-powered study assistant designed to help students learn more effectively from study materials such as lecture notes, textbooks, and handwritten documents.
