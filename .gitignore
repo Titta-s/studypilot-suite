@@ -17,3 +17,4 @@ studypilot-frontend/dist/
 
 #Ignore firebase key file
 firebase/firebase_key.json 
+studypilot-adk/firebase/firebase_key.json
