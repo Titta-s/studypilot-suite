@@ -7,7 +7,7 @@ from google.cloud.firestore_v1 import SERVER_TIMESTAMP
 class FirestoreService:
 
     @staticmethod
-    def save_agent_response(agent, query, response, image_uploaded=False):
+    def save_agent_response(uid, agent, query, response, image_uploaded=False):
 
         # Map active_tab → Firestore collection
         collection_map = {
@@ -20,6 +20,7 @@ class FirestoreService:
         collection = collection_map.get(agent, "agent_history")
 
         document = {
+            "uid": uid,
             "agent": agent,
             "query": query,
             "response": response,

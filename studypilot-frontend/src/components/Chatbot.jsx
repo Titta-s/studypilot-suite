@@ -58,10 +58,15 @@ export default function Chatbot({ username, onLogout }) {
     if (attachedFile) formData.append('file', attachedFile);
 
     try {
+      const token = localStorage.getItem("firebaseToken");
+      
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`},
         body: formData,
       });
+      
 
       if (!response.ok) throw new Error(`Space Station error! Status: ${response.status}`);
       const data = await response.json();

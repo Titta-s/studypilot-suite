@@ -26,8 +26,10 @@ export default function App() {
     );
 
     // Save the logged-in user if needed later
-    console.log(userCredential.user);
-
+    // console.log(userCredential.user);
+    const token = await userCredential.user.getIdToken();
+    localStorage.setItem("firebaseToken", token);
+    
     setCurrentScreen("dashboard");
 
   } catch (error) {
