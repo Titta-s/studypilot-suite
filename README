@@ -1,0 +1,296 @@
+# 🚀 StudyPilot – AI-Powered Learning Assistant
+
+## 📖 Overview
+
+**StudyPilot** is an AI-powered study assistant designed to help students learn more effectively from study materials such as lecture notes, textbooks, and handwritten documents.
+
+Users can upload study materials and instantly generate:
+
+* 📝 Smart Notes
+* 📚 Flashcards
+* ❓ AI-generated Quizzes
+* 💡 Topic Explanations
+
+The system combines **Google Gemini AI**, **FastAPI**, **React**, and **Firebase** to provide an interactive learning experience.
+
+---
+
+# ✨ Features
+
+* 📄 Image-based study material analysis
+* 🤖 AI-generated study notes
+* 🧠 Flashcard generation
+* ❓ Multiple-choice quiz generation
+* 💬 AI explanations for difficult concepts
+* 🔥 Firebase Authentication
+* ☁️ Firestore cloud database
+* 📜 Automatic history storage
+* 🔒 Secure user authentication using Firebase ID Tokens
+* ⚡ FastAPI REST APIs
+* 🎨 Responsive React frontend
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                 React Frontend
+                        │
+                        │
+                 POST /api/chat
+                        │
+                        ▼
+                 FastAPI Backend
+                        │
+             Coordinator Router
+                        │
+      ┌─────────┬──────────┬────────────┬──────────┐
+      │         │          │            │          │
+   Notes     Quiz     Flashcards   Explainer
+      │         │          │            │
+      └─────────┴──────────┴────────────┘
+                        │
+                  Google Gemini
+                        │
+              AI Generated Response
+                        │
+                Firebase Firestore
+                        │
+              User Study History
+```
+
+---
+
+# 🛠️ Tech Stack
+
+### Frontend
+
+* React.js
+* Tailwind CSS
+* JavaScript
+* Firebase SDK
+
+### Backend
+
+* Python 3.14
+* FastAPI
+* Uvicorn
+* Pydantic
+
+### AI
+
+* Google Gemini API
+
+### Database
+
+* Firebase Firestore
+
+### Authentication
+
+* Firebase Authentication
+
+---
+
+# 📂 Project Structure
+
+```text
+studypilot-suite/
+
+├── studypilot-frontend/
+│   ├── src/
+│   ├── components/
+│   └── firebase.js
+│
+├── studypilot-adk/
+│   ├── firebase/
+│   │     firebase_config.py
+│   │     firebase_auth.py
+│   │
+│   ├── services/
+│   │     firestore_service.py
+│   │
+│   ├── routes/
+│   │     history.py
+│   │     notes.py
+│   │
+│   ├── agents/
+│   │     coordinator_agent.py
+│   │     notes_agent.py
+│   │     quiz_agent.py
+│   │     flashcard_agent.py
+│   │     explainer_agent.py
+│   │
+│   ├── app.py
+│   └── requirements.txt
+│
+└── README.md
+```
+
+---
+
+# 🔥 Firebase Integration
+
+The project uses Firebase for:
+
+* User Authentication
+* Firestore Database
+* User-specific study history
+* Secure backend authentication using Firebase ID Tokens
+
+Each generated AI response is automatically stored in Firestore.
+
+Example document:
+
+```json
+{
+  "uid": "firebase-user-id",
+  "agent": "notes",
+  "query": "Explain CPU Scheduling",
+  "response": "...",
+  "image_uploaded": true,
+  "created_at": "2026-06-28T12:30:00"
+}
+```
+
+---
+
+# 🚀 Installation
+
+## Clone Repository
+
+```bash
+git clone https://github.com/anntitta/studypilot-suite.git
+
+cd studypilot-suite
+```
+
+---
+
+## Backend Setup
+
+```bash
+cd studypilot-adk
+
+python -m venv venv
+
+venv\Scripts\activate
+
+pip install -r requirements.txt
+
+uvicorn app:app --reload
+```
+
+Backend runs at:
+
+```
+http://127.0.0.1:8000
+```
+
+Swagger API:
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## Frontend Setup
+
+```bash
+cd studypilot-frontend
+
+npm install
+
+npm run dev
+```
+
+Frontend runs at:
+
+```
+http://localhost:5173
+```
+
+---
+
+# 🔑 Environment Variables
+
+Create a `.env` file for the backend:
+
+```env
+GOOGLE_API_KEY=YOUR_GEMINI_API_KEY
+GOOGLE_APPLICATION_CREDENTIALS=serviceAccountKey.json
+```
+
+For the frontend, configure Firebase in:
+
+```
+src/firebase.js
+```
+
+---
+
+# 📡 API Endpoints
+
+| Method | Endpoint                | Description                           |
+| ------ | ----------------------- | ------------------------------------- |
+| POST   | `/api/chat`             | Generate AI response                  |
+| GET    | `/history/{collection}` | Retrieve authenticated user's history |
+
+---
+
+# 📸 Screenshots
+
+Include screenshots of:
+
+* Login Page
+* Dashboard
+* Notes Generation
+* Flashcards
+* Quiz
+* Firestore Collections
+* Swagger Documentation
+
+---
+
+# 👥 Team Contributions
+
+| Member        | Responsibility                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------ |
+| Team Member 1 | React Frontend                                                                                         |
+| Team Member 2 | UI/UX Design                                                                                           |
+| **Ann Titta** | FastAPI Backend, Firebase Authentication, Firestore Integration, AI Agent Integration, API Development |
+| Team Member 4 | Testing & Documentation                                                                                |
+
+---
+
+# 🚀 Future Enhancements
+
+* PDF export
+* Voice explanations
+* Personalized study recommendations
+* Learning analytics dashboard
+* Study streak tracking
+* Multi-language support
+* Real-time collaboration
+
+---
+
+# 📄 License
+
+This project was developed as part of an academic internship for educational purposes.
+
+---
+
+# 🙏 Acknowledgements
+
+* Google Gemini AI
+* FastAPI
+* Firebase
+* React
+* Tailwind CSS
+
+---
+
+<p align="center">
+<b>StudyPilot – Making Learning Smarter with AI 🚀</b>
+</p>
