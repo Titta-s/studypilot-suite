@@ -7,7 +7,10 @@ load_dotenv()
 
 # Automatically initializes using GEMINI_API_KEY from environment memory
 
-API_KEY = os.getenv("GEMINI_API_KEY")      
+API_KEY = os.getenv("GEMINI_API_KEY")  
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
 client = genai.Client(api_key=API_KEY)  # Initialize the Gemini API client with the API key
 
 # 🪐 Specialized Gemini Model Distribution Matrix
