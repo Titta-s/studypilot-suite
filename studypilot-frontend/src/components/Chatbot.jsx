@@ -114,7 +114,7 @@ export default function Chatbot({ username, onLogout }) {
       localStorage.setItem(statusKey, 'true');
       localStorage.setItem(expiryKey, String(localExpiryTimestamp));
       setSubscriptionActive(true);
-      alert("⚠️ Sandbox Authorization Override: Unlocked flight parameters tier for 30 days!");
+      alert("✨ Space Super-Flight Upgrade Active! Teleporting you back to the flight deck.");
     } finally {
       setIsPaymentLoading(false);
     }
@@ -221,6 +221,8 @@ export default function Chatbot({ username, onLogout }) {
   const handleCheckAnswer = (correctIdx) => {
     if (selectedOption === null) return alert("🚀 Choose an option card to test your launch systems!");
     setHasAnsweredCurrent(true);
+    
+    // 🧠 RETAINED TRACKING: Add current selection configuration history logs matrix
     setUserAnswersHistory(prev => [...prev, selectedOption]);
     
     if (Number(selectedOption) === Number(correctIdx)) {
@@ -260,16 +262,32 @@ export default function Chatbot({ username, onLogout }) {
   };
 
   const handleDownloadPDF = () => {
+    const printableElement = document.getElementById('pdf-printable-area');
+    if (!printableElement) return alert("🛸 Printing node reference missing from DOM layout context!");
+
     const printWindow = window.open('', '_blank');
     const title = activeTab === 'notes' ? 'StudyPilot Intel Notes' : 'StudyPilot Explainer Manual';
     
     printWindow.document.write(`
       <html>
-        <head><title>${title}</title></head>
-        <body style="font-family:sans-serif; padding:40px; color:#1e293b;">
+        <head>
+          <title>${title}</title>
+          <style>
+            body { font-family: system-ui, sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; }
+            h2 { color: #4338ca; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 20px; }
+            h4 { color: #4338ca; margin-top: 24px; text-transform: uppercase; font-size: 15px; }
+            p { font-size: 13px; margin: 8px 0; color: #334155; font-weight: 500; }
+            hr { border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
           <h2>STUDYPILOT MISSION LOGS 🐯</h2>
+          <div style="font-size: 11px; font-weight: bold; color: #94a3b8; margin-bottom: 20px;">
+            PILOT: ${username || 'Explorer'} | DISCIPLINE VECTOR: ${activeTab.toUpperCase()}
+          </div>
           <hr />
-          <div>${document.getElementById('pdf-printable-area').innerHTML}</div>
+          <div>${printableElement.innerHTML}</div>
+          <script>window.onload = function() { window.print(); window.close(); }</script>
         </body>
       </html>
     `);
@@ -296,17 +314,14 @@ export default function Chatbot({ username, onLogout }) {
   return (
     <div className="bg-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-pink-500/30">
       
-      {/* 🌟 FIXED HEADER NAVBAR CONTAINER USING FLEX-WRAP AND GAP CONTROLS TO PREVENT OVERLAPPING */}
+      {/* HEADER NAVBAR CONTAINER */}
       <nav className="border-b-2 border-slate-200 bg-white px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-sm">
         <div className="flex items-center gap-3 group cursor-pointer select-none">
           <img className="w-9 h-9" src="https://img.icons8.com/fluent/344/year-of-tiger.png" alt="Logo" />
           <span className="font-black text-xl tracking-wider uppercase bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">StudyPilot</span>
         </div>
 
-        {/* Action Controls Item Substack layout wrapper grid node */}
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 select-none">
-          
-          {/* Subscription payment trigger */}
           <button 
             onClick={handleExecuteMonthlyPayment}
             disabled={subscriptionActive || isPaymentProcessing}
@@ -316,13 +331,13 @@ export default function Chatbot({ username, onLogout }) {
                 : "bg-gradient-to-r from-pink-500 to-rose-500 text-white border-rose-400 hover:scale-105 shadow-md"
             }`}
           >
-            {isPaymentProcessing ? "Processing... 💳" : subscriptionActive ? "Premium Active 🌌" : "Subscribe Plan 💰"}
+            {isPaymentProcessing ? "Processing Plan... 🚀" : subscriptionActive ? "Super-Flight Loaded 🌌" : "Power Up Gear ⚡"}
           </button>
 
           <button 
-            onClick={() => { if(subscriptionActive) setIsArcadeActive(true); else alert("💳 Activate plan layout first!"); }}
+            onClick={() => { if(subscriptionActive) setIsArcadeActive(true); else alert("🔒 Locked Sector: Activate your Super-Flight license to jump inside the Battle Arena!"); }}
             disabled={!subscriptionActive}
-            className="disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-orange-600 text-slate-950 px-3 sm:px-4 py-1.5 rounded-2xl text-[11px] font-black tracking-widest uppercase transition shadow-sm flex items-center gap-1.5"
+            className="disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-orange-500 text-slate-950 px-3 sm:px-4 py-1.5 rounded-2xl text-[11px] font-black tracking-widest uppercase transition transform shadow-sm flex items-center gap-1.5"
           >
             <span>🎮</span> Battle Arena Mode
           </button>
@@ -334,10 +349,7 @@ export default function Chatbot({ username, onLogout }) {
             <span className="text-[10px] font-black text-indigo-950 tracking-wider uppercase hidden sm:inline">My Vault 🏅</span>
             <div className="flex items-center -space-x-1">
               {activeNavbarBadges.map((badge, idx) => (
-                <div 
-                  key={idx} 
-                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-white text-xs flex items-center justify-center bg-white shadow-sm ${badge.count === 0 ? 'opacity-20 filter grayscale' : ''}`}
-                >
+                <div key={idx} className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-white text-xs flex items-center justify-center bg-white shadow-sm ${badge.count === 0 ? 'opacity-20 filter grayscale' : ''}`}>
                   {badge.icon}
                 </div>
               ))}
@@ -388,53 +400,26 @@ export default function Chatbot({ username, onLogout }) {
         </div>
       )}
 
-      {/* GAMIFIED LOCK OVERLAY SCREEN WITH VISIBILITY FIXES */}
+      {/* GAMIFIED LOCK OVERLAY SCREEN */}
       {!subscriptionActive ? (
         <div className="flex-1 w-full flex items-center justify-center px-4 py-16 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white border-4 border-indigo-600 w-full max-w-xl rounded-3xl p-8 shadow-2xl text-center space-y-6 transform scale-100 transition-all">
             <span className="text-7xl block animate-bounce select-none">⚡</span>
-            
-            <h2 className="text-2xl sm:text-3xl font-black text-indigo-950 uppercase tracking-tight">
-              Ready to Power Up Your Learning?
-            </h2>
-            
-            <p className="text-xs sm:text-sm text-slate-600 font-bold max-w-md mx-auto leading-relaxed">
-              Your standard 30-day trial tank has run empty! Unlock your ultimate cosmic upgrade below to teleport directly past boring homework limits.
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-black text-indigo-950 uppercase tracking-tight">Ready to Power Up Your Learning?</h2>
+            <p className="text-xs sm:text-sm text-slate-600 font-bold max-w-md mx-auto leading-relaxed">Your standard 30-day trial tank has run empty! Unlock your ultimate cosmic upgrade below to teleport directly past boring homework limits.</p>
 
             <div className="bg-indigo-50/60 border-2 border-indigo-100 rounded-2xl p-5 text-left space-y-3 shadow-inner">
-              <h4 className="text-xs font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">
-                🚀 UNLOCKED SUPER-POWERS INCLUDE:
-              </h4>
+              <h4 className="text-xs font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">🚀 UNLOCKED SUPER-POWERS INCLUDE:</h4>
               <ul className="text-xs text-slate-800 font-black space-y-2.5 pl-1">
-                <li className="flex items-center gap-2.5">
-                  <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">📝</span> 
-                  <span>Create Magic Summary Study Notes instantly</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="bg-pink-500 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">👶</span> 
-                  <span>Decode tough topics with Simple Kid Explainers</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="bg-amber-500 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">🎨</span> 
-                  <span>Build custom, hero-themed Flashcard Decks</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <span className="bg-purple-600 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">🧠</span> 
-                  <span>Play Interactive Quizzes & hoard rare Vault Badges</span>
-                </li>
+                <li className="flex items-center gap-2.5"><span className="bg-indigo-600 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">📝</span> <span>Create Magic Summary Study Notes instantly</span></li>
+                <li className="flex items-center gap-2.5"><span className="bg-pink-500 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">👶</span> <span>Decode tough topics with Simple Kid Explainers</span></li>
+                <li className="flex items-center gap-2.5"><span className="bg-amber-500 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">🎨</span> <span>Build custom, hero-themed Flashcard Decks</span></li>
+                <li className="flex items-center gap-2.5"><span className="bg-purple-600 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">🧠</span> <span>Play Interactive Quizzes & hoard rare Vault Badges</span></li>
               </ul>
             </div>
 
-            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-              Securely saves your level accomplishments across devices for the full 30 days cycle!
-            </p>
-
-            <button 
-              onClick={handleExecuteMonthlyPayment}
-              disabled={isPaymentProcessing}
-              className="w-full max-w-md bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl transition transform active:scale-95 border-b-4 border-indigo-800"
-            >
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Securely saves your level accomplishments across devices for the full 30 days cycle!</p>
+            <button onClick={handleExecuteMonthlyPayment} disabled={isPaymentProcessing} className="w-full max-w-md bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-black py-4.5 rounded-2xl uppercase tracking-widest text-xs shadow-xl transition transform active:scale-95 border-b-4 border-indigo-800">
               {isPaymentProcessing ? "Engaging Hyperdrive Thrusters..." : "Activate Super-Flight License Mode! 🦁💥"}
             </button>
           </div>
@@ -530,9 +515,61 @@ export default function Chatbot({ username, onLogout }) {
                         </div>
                       </div>
                     ) : (
-                      <div className="bg-white border-2 border-slate-200 text-center py-12 px-6 rounded-3xl shadow-md max-w-md mx-auto space-y-5">
-                        <h3 className="text-3xl font-black uppercase tracking-wide">Mission Cleared!</h3>
-                        <button onClick={() => { setStructuredQuiz(null); setQuizComplete(false); }} className="w-full max-w-xs bg-indigo-600 text-white font-black py-4 px-6 rounded-2xl uppercase tracking-widest text-xs shadow-lg">Return to Flight Deck 🐯</button>
+                      /* 🌟 UPGRADED: DETAILED MISSION END COMPLETE REPORT SCREEN MATRIX */
+                      <div className="bg-white border-2 border-slate-200 p-6 rounded-3xl shadow-xl w-full max-w-2xl mx-auto space-y-6">
+                        <div className="text-center space-y-2">
+                          <span className="text-6xl block animate-pulse">📋</span>
+                          <h3 className="text-2xl font-black uppercase tracking-wide text-indigo-950">Mission Review Report</h3>
+                          <p className="text-xs text-slate-400 font-bold uppercase">Captain Flight Performance Matrix Evaluation Log</p>
+                        </div>
+
+                        {/* High level macro stats blocks */}
+                        <div className="grid grid-cols-2 gap-4 bg-slate-50 border border-slate-200 p-4 rounded-2xl">
+                          <div className="text-center">
+                            <span className="text-[10px] font-black text-slate-400 uppercase block">CORRECT RESPONSES</span>
+                            <span className="text-2xl font-extrabold text-emerald-500">{score} Questions</span>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-[10px] font-black text-slate-400 uppercase block">WRONG RESPONSES</span>
+                            <span className="text-2xl font-extrabold text-rose-500">{structuredQuiz.questions.length - score} Questions</span>
+                          </div>
+                        </div>
+
+                        {/* Itemized loop showing all questions asked with answer parameters */}
+                        <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
+                          {structuredQuiz.questions.map((q, qIdx) => {
+                            const chosenIdx = userAnswersHistory[qIdx];
+                            const isUserCorrect = Number(chosenIdx) === Number(q.correct_answer_index);
+                            
+                            return (
+                              <div key={qIdx} className="bg-white border-2 border-slate-100 rounded-xl p-4 space-y-2.5 relative">
+                                <div className="flex justify-between items-start gap-2">
+                                  <h5 className="text-xs font-black text-slate-800 leading-tight">Q{qIdx + 1}: {q.question}</h5>
+                                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${
+                                    isUserCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                  }`}>
+                                    {isUserCorrect ? "CORRECT ✓" : "WRONG ✕"}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] space-y-1 font-bold pl-2 border-l-2 border-slate-200">
+                                  <p className="text-slate-500">Your Choice: <span className={isUserCorrect ? 'text-emerald-600' : 'text-rose-500 font-black'}>{q.options[chosenIdx] || "Skipped Vector"}</span></p>
+                                  {!isUserCorrect && (
+                                    <p className="text-slate-600">Correct Answer: <span className="text-emerald-600 font-black">{q.options[q.correct_answer_index]}</span></p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex justify-center pt-2">
+                          <button 
+                            onClick={() => { setStructuredQuiz(null); setQuizComplete(false); setUserAnswersHistory([]); }} 
+                            className="w-full max-w-sm bg-indigo-600 hover:bg-pink-600 text-white font-black py-4 px-6 rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+                          >
+                            Return to Flight Deck 🐯
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
