@@ -1,21 +1,17 @@
-import os
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-
-from fastapi import Depends
-from firebase.firebase_auth import verify_firebase_token
+from typing import List
 
 from router import central_coordinator_router
+from routes.payments import router as payments_router
 
-from routes.notes import router as notes_router
-from routes.history import router as history_router
+app = FastAPI(
+    title="StudyPilot API",
+    version="6.0"
+)
 
-from services.firestore_service import FirestoreService
-
-app = FastAPI(title="StudyPilot Multimodal Vision Engine API - Production", version="6.0")
-
-app.include_router(history_router)
-app.include_router(notes_router)
+# Register the payment routes with the main application core
+app.include_router(payments_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,48 +22,30 @@ app.add_middleware(
 )
 
 @app.post("/api/chat")
-async def handle_agent_request(
+async def chat_endpoint(
     message: str = Form(""),
     active_tab: str = Form("notes"),
-    file: UploadFile = File(None),
-    user=Depends(verify_firebase_token)
+    files: List[UploadFile] = File([])
 ):
-    print(f"\n🛸 [Incoming Telemetry] Active Mode Segment: {active_tab} | Command: '{message}'")
-    
-    # ✨ THE FIX: Force empty prompts with images to automatically target the Explainer keyword!
-    if not message.strip() and file is not None:
-        clean_message = "Explain this image directly in simple terms"
-    else:
-        clean_message = message.strip() if message else f"Analyze this layout context for {active_tab} parameters"
-        
-    image_bytes = None
-    mime_type = None
+    images_data = []
 
-    if file is not None:
-        print(f"📸 [Image Handler] Ingested raw visual attachment stream: '{file.filename}'")
-        image_bytes = await file.read()
-        mime_type = file.content_type  
+    for f in files:
+        if f.filename:
+            content = await f.read()
+            images_data.append(
+                {
+                    "bytes": content,
+                    "mime_type": f.content_type
+                }
+            )
 
-    try:
-        # Forwarding parameter matrix configurations smoothly into routing matrix evaluations
-        agent_response = central_coordinator_router(
-            user_query=clean_message,
-            image_bytes=image_bytes,
-            mime_type=mime_type,
-            active_tab=active_tab
-        )
+    response = central_coordinator_router(
+        user_query=message,
+        images=images_data,
+        active_tab=active_tab
+    )
 
-        # Save the agent response to Firestore
-        FirestoreService.save_agent_response(
-            uid=user["uid"],
-            agent=active_tab,
-            query=clean_message,
-            response=agent_response,
-            image_uploaded=file is not None
-        )
-        
-    except Exception as server_err:
-        print(f"❌ Server Runtime Exception: {server_err}")
-        agent_response = "🛸 An operational error occurred in the vision core matrix."
-
-    return {"success": True, "response": agent_response}
+    return {
+        "success": True,
+        "response": response
+    }

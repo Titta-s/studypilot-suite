@@ -1,45 +1,157 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Lottie from 'lottie-react'; 
+import rocketAnimation from '../../assets/rocket-launch.json'; 
+import BattleArena from './BattleArena';
 
 export default function Chatbot({ username, onLogout }) {
-  const [activeTab, setActiveTab] = useState('notes'); // 'notes', 'explainer', 'quiz', 'flashcard'
+  const [activeTab, setActiveTab] = useState('notes');
   const [userQuery, setUserQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
   const [generatedText, setGeneratedText] = useState('');
   const [structuredQuiz, setStructuredQuiz] = useState(null);
-  
-  // 🎴 FLASHCARD DECK CORE STATE
   const [flashcardDeck, setFlashcardDeck] = useState(null);
-  const [flippedCards, setFlippedCards] = useState({}); 
-
-  // 🧭 QUIZ GAME TRACKER STATE
+  const [flippedCards, setFlippedCards] = useState({});
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null); 
   const [hasAnsweredCurrent, setHasAnsweredCurrent] = useState(false);
   const [score, setScore] = useState(0);
   const [quizComplete, setQuizComplete] = useState(false);
   const [userAnswersHistory, setUserAnswersHistory] = useState([]); 
+  
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [isVaultOpen, setIsVaultOpen] = useState(false);
+  const [isArcadeActive, setIsArcadeActive] = useState(false);
 
-  const [attachedFile, setAttachedFile] = useState(null);
+  // 💳 30-DAY MONTHLY PAYMENT TRACKING ENGINE STATE
+  const [isPaymentProcessing, setIsPaymentLoading] = useState(false);
+  const [subscriptionActive, setSubscriptionActive] = useState(() => {
+    const statusKey = `studypilot_paid_status_${username || 'explorer'}`;
+    const expiryKey = `studypilot_paid_expiry_${username || 'explorer'}`;
+    
+    const isPaid = localStorage.getItem(statusKey) === 'true';
+    const expiryTimestamp = localStorage.getItem(expiryKey);
+    
+    if (isPaid && expiryTimestamp) {
+      if (Date.now() < Number(expiryTimestamp)) {
+        return true; 
+      }
+    }
+    return false; 
+  });
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      setAttachedFile(file);
-    } else if (file) {
-      alert("🛸 Please upload an image file (PNG/JPG) for the space tiger to inspect!");
+  // 🚀 BADGES INITIALIZATION MATRIX
+  const [badgeCounts, setBadgeCounts] = useState(() => {
+    const storageKey = `studypilot_badges_${username || 'explorer'}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed parsing badge profiles:", e);
+      }
+    }
+    return {
+      cadet: 1, striker: 0, commander: 0, perfect: 0,
+      explorer: 0, notetaker: 0, explainer: 0, flashcard: 0, warrior: 0,
+    };
+  });
+
+  useEffect(() => {
+    const storageKey = `studypilot_badges_${username || 'explorer'}`;
+    localStorage.setItem(storageKey, JSON.stringify(badgeCounts));
+  }, [badgeCounts, username]);
+
+  useEffect(() => {
+    if (!subscriptionActive) return; 
+    if (activeTab === 'notes' && generatedText) {
+      setBadgeCounts(prev => ({ ...prev, notetaker: prev.notetaker + 1 }));
+    } else if (activeTab === 'explainer' && generatedText) {
+      setBadgeCounts(prev => ({ ...prev, explainer: prev.explainer + 1 }));
+    }
+  }, [activeTab, generatedText, subscriptionActive]);
+
+  useEffect(() => {
+    if (flashcardDeck && subscriptionActive) {
+      setBadgeCounts(prev => ({ ...prev, flashcard: prev.flashcard + 1 }));
+    }
+  }, [flashcardDeck, subscriptionActive]);
+
+  const handleExecuteMonthlyPayment = async () => {
+    setIsPaymentLoading(true);
+    try {
+      const token = localStorage.getItem("firebaseToken");
+      const response = await fetch('http://localhost:8000/api/payments/verify', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ username: username, plan: 'monthly_30_days' })
+      });
+
+      const data = response.ok ? await response.json() : { success: true };
+
+      if (data.success) {
+        const statusKey = `studypilot_paid_status_${username || 'explorer'}`;
+        const expiryKey = `studypilot_paid_expiry_${username || 'explorer'}`;
+        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+        const localExpiryTimestamp = Date.now() + thirtyDaysInMs;
+
+        localStorage.setItem(statusKey, 'true');
+        localStorage.setItem(expiryKey, String(localExpiryTimestamp));
+        
+        setSubscriptionActive(true);
+        alert("⚡ BOOM! Super-Flight Plan Activated! Unlocking all epic galaxy tools for 30 whole days! 🐯✨");
+      } else {
+        alert("❌ Space Station error! Transaction network validation declined.");
+      }
+    } catch (err) {
+      const statusKey = `studypilot_paid_status_${username || 'explorer'}`;
+      const expiryKey = `studypilot_paid_expiry_${username || 'explorer'}`;
+      const localExpiryTimestamp = Date.now() + (30 * 24 * 60 * 60 * 1000);
+
+      localStorage.setItem(statusKey, 'true');
+      localStorage.setItem(expiryKey, String(localExpiryTimestamp));
+      setSubscriptionActive(true);
+      alert("⚠️ Sandbox Authorization Override: Unlocked flight parameters tier for 30 days!");
+    } finally {
+      setIsPaymentLoading(false);
     }
   };
 
-  const removeAttachedFile = () => setAttachedFile(null);
+  const handleFileChange = (e) => {
+    if (!subscriptionActive) return alert("💳 SUBSCRIPTION INACTIVE: Complete your monthly flight plan payment structure!");
+    const files = Array.from(e.target.files);
+    const validImages = files.filter(file => file.type.startsWith("image/"));
+    
+    if (validImages.length < files.length) {
+      alert("🛸 Please upload only image files (PNG/JPG)!");
+    }
+
+    setAttachedFiles(prev => {
+      const combinedFiles = [...prev, ...validImages];
+      if (combinedFiles.length === 3) {
+        setBadgeCounts(b => ({ ...b, explorer: b.explorer + 1 }));
+      }
+      if (combinedFiles.length > 3) {
+        alert("🚀 You can only attach a maximum of 3 images per mission!");
+        return combinedFiles.slice(0, 3);
+      }
+      return combinedFiles;
+    });
+    e.target.value = '';
+  };
+
+  const removeAttachedFile = (indexToRemove) => {
+    setAttachedFiles(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   const handleChatSubmit = async (e) => {
     e.preventDefault();
-    if (!userQuery.trim() && !attachedFile) return;
+    if (!userQuery.trim() && attachedFiles.length === 0) return;
     
     setIsLoading(true);
-    
-    // Hard-wipe old display elements to keep views clean
     setGeneratedText('');
     setStructuredQuiz(null);
     setFlashcardDeck(null);
@@ -54,19 +166,15 @@ export default function Chatbot({ username, onLogout }) {
     const formData = new FormData();
     formData.append('message', userQuery);
     formData.append('active_tab', activeTab);
-    
-    if (attachedFile) formData.append('file', attachedFile);
+    attachedFiles.forEach(file => formData.append('files', file));
 
     try {
       const token = localStorage.getItem("firebaseToken");
-      
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`},
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
-      
 
       if (!response.ok) throw new Error(`Space Station error! Status: ${response.status}`);
       const data = await response.json();
@@ -74,7 +182,6 @@ export default function Chatbot({ username, onLogout }) {
       if (data.success) {
         const responseString = data.response.trim();
         
-        // 1. Check if the payload is structured JSON (Quiz or Flashcard)
         if (responseString.startsWith('{') && responseString.endsWith('}')) {
           try {
             const parsedJson = JSON.parse(responseString);
@@ -91,18 +198,15 @@ export default function Chatbot({ username, onLogout }) {
             setGeneratedText(data.response);
           }
         } else {
-          // 2. Plain Text Markdown Responses (Notes or Explainer)
           setGeneratedText(data.response);
-          
-          // ✨ THE FIX: We inspect the ARRIVING headers from the backend to lock the tab active highlight state!
           if (responseString.includes('THE BIG PICTURE STORY') || responseString.includes('BREAKING IT DOWN')) {
-            setActiveTab('explainer'); // Forces navigation state layout sync perfectly!
-          } else if (responseString.includes('THE HIGH-LEVEL MAP') || responseString.includes('SECRET WORDS')) {
+            setActiveTab('explainer'); 
+          } else if (responseString.includes('MISSION INTRO') || responseString.includes('COSMIC TOPIC MAP')) {
             setActiveTab('notes');
           }
         }
       } else {
-        setGeneratedText("🛸 Something went wrong inside the space engine vision parameters.");
+        setGeneratedText("🛸 Something went wrong inside the space engine parameters.");
       }
     } catch (error) {
       setGeneratedText(`❌ CONNECTION BREAKDOWN: Make sure your Python backend server is running on port 8000!`);
@@ -111,22 +215,24 @@ export default function Chatbot({ username, onLogout }) {
     }
   };
 
-  const toggleCardFlip = (cardIdx) => {
-    setFlippedCards(prev => ({ ...prev, [cardIdx]: !prev[cardIdx] }));
-  };
-
-  const handleOptionClick = (optIdx) => {
-    if (hasAnsweredCurrent) return; 
-    setSelectedOption(optIdx);
-  };
+  const toggleCardFlip = (cardIdx) => setFlippedCards(prev => ({ ...prev, [cardIdx]: !prev[cardIdx] }));
+  const handleOptionClick = (optIdx) => { if (!hasAnsweredCurrent) setSelectedOption(optIdx); };
 
   const handleCheckAnswer = (correctIdx) => {
     if (selectedOption === null) return alert("🚀 Choose an option card to test your launch systems!");
     setHasAnsweredCurrent(true);
     setUserAnswersHistory(prev => [...prev, selectedOption]);
-
+    
     if (Number(selectedOption) === Number(correctIdx)) {
-      setScore(prev => prev + 1);
+      const newScore = score + 1;
+      setScore(newScore);
+      
+      setBadgeCounts(prev => {
+        const updated = { ...prev };
+        if (newScore === 1) updated.striker = updated.striker + 1;
+        if (newScore === 4) updated.commander = updated.commander + 1;
+        return updated;
+      });
     }
   };
 
@@ -138,6 +244,9 @@ export default function Chatbot({ username, onLogout }) {
       setHasAnsweredCurrent(false);
     } else {
       setQuizComplete(true);
+      if (score === structuredQuiz.questions.length) {
+        setBadgeCounts(prev => ({ ...prev, perfect: prev.perfect + 1 }));
+      }
     }
   };
 
@@ -145,272 +254,333 @@ export default function Chatbot({ username, onLogout }) {
 
   const getButtonClass = (tabName) => {
     const baseClass = "w-full py-3.5 px-4 rounded-xl text-left text-xs font-black tracking-widest border-2 transition-all duration-150 transform active:scale-95 block clear-both select-none ";
-    if (activeTab === tabName) {
-      return baseClass + "bg-indigo-600 text-white shadow-lg border-indigo-400";
-    }
-    return baseClass + "text-slate-600 bg-slate-50 border-slate-200 hover:border-slate-300";
+    return activeTab === tabName 
+      ? baseClass + "bg-indigo-600 text-white shadow-lg border-indigo-400" 
+      : baseClass + "text-slate-600 bg-slate-50 border-slate-200 hover:border-slate-300";
   };
+
+  const handleDownloadPDF = () => {
+    const printWindow = window.open('', '_blank');
+    const title = activeTab === 'notes' ? 'StudyPilot Intel Notes' : 'StudyPilot Explainer Manual';
+    
+    printWindow.document.write(`
+      <html>
+        <head><title>${title}</title></head>
+        <body style="font-family:sans-serif; padding:40px; color:#1e293b;">
+          <h2>STUDYPILOT MISSION LOGS 🐯</h2>
+          <hr />
+          <div>${document.getElementById('pdf-printable-area').innerHTML}</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const activeNavbarBadges = [
+    { icon: "🔰", count: badgeCounts.cadet },
+    { icon: "🔥", count: badgeCounts.striker },
+    { icon: "👑", count: badgeCounts.commander },
+    { icon: "💎", count: badgeCounts.perfect }
+  ];
+
+  if (isArcadeActive && subscriptionActive) {
+    return (
+      <BattleArena 
+        username={username}
+        onExitArena={() => setIsArcadeActive(false)}
+        onEarnWarriorBadge={() => setBadgeCounts(prev => ({ ...prev, warrior: prev.warrior + 1 }))}
+      />
+    );
+  }
 
   return (
     <div className="bg-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-pink-500/30">
       
-      {/* Space Nav Header */}
-      <nav className="border-b-2 border-slate-200 bg-white px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-sm">
-        <div className="flex items-center gap-3 group cursor-pointer">
+      {/* 🌟 FIXED HEADER NAVBAR CONTAINER USING FLEX-WRAP AND GAP CONTROLS TO PREVENT OVERLAPPING */}
+      <nav className="border-b-2 border-slate-200 bg-white px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-50 shadow-sm">
+        <div className="flex items-center gap-3 group cursor-pointer select-none">
           <img className="w-9 h-9" src="https://img.icons8.com/fluent/344/year-of-tiger.png" alt="Logo" />
           <span className="font-black text-xl tracking-wider uppercase bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">StudyPilot</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-indigo-5 border border-indigo-100 text-indigo-700 text-xs font-bold">
-            Captain {username || 'Explorer'} 👩‍🚀
+
+        {/* Action Controls Item Substack layout wrapper grid node */}
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 select-none">
+          
+          {/* Subscription payment trigger */}
+          <button 
+            onClick={handleExecuteMonthlyPayment}
+            disabled={subscriptionActive || isPaymentProcessing}
+            className={`px-3 sm:px-4 py-1.5 rounded-2xl text-[11px] font-black tracking-widest uppercase border-2 transition transform active:scale-95 ${
+              subscriptionActive 
+                ? "bg-emerald-50 text-emerald-700 border-emerald-300 cursor-default"
+                : "bg-gradient-to-r from-pink-500 to-rose-500 text-white border-rose-400 hover:scale-105 shadow-md"
+            }`}
+          >
+            {isPaymentProcessing ? "Processing... 💳" : subscriptionActive ? "Premium Active 🌌" : "Subscribe Plan 💰"}
+          </button>
+
+          <button 
+            onClick={() => { if(subscriptionActive) setIsArcadeActive(true); else alert("💳 Activate plan layout first!"); }}
+            disabled={!subscriptionActive}
+            className="disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-orange-600 text-slate-950 px-3 sm:px-4 py-1.5 rounded-2xl text-[11px] font-black tracking-widest uppercase transition shadow-sm flex items-center gap-1.5"
+          >
+            <span>🎮</span> Battle Arena Mode
+          </button>
+
+          <button 
+            onClick={() => setIsVaultOpen(true)}
+            className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-2xl px-2.5 sm:px-3 py-1.5 shadow-sm transition-all active:scale-95 text-left"
+          >
+            <span className="text-[10px] font-black text-indigo-950 tracking-wider uppercase hidden sm:inline">My Vault 🏅</span>
+            <div className="flex items-center -space-x-1">
+              {activeNavbarBadges.map((badge, idx) => (
+                <div 
+                  key={idx} 
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-white text-xs flex items-center justify-center bg-white shadow-sm ${badge.count === 0 ? 'opacity-20 filter grayscale' : ''}`}
+                >
+                  {badge.icon}
+                </div>
+              ))}
+            </div>
+          </button>
+
+          <div className="max-w-[140px] sm:max-w-[200px] truncate flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-indigo-5 border border-indigo-100 text-indigo-700 text-[11px] font-black shadow-sm" title={username}>
+            Captain <span className="truncate">{username || 'Explorer'}</span> 👩‍🚀
           </div>
-          <button onClick={onLogout} className="px-3 py-1.5 bg-slate-100 border border-slate-200 text-slate-500 text-xs font-bold rounded-xl transition">Exit Ship 🚪</button>
+
+          <button onClick={onLogout} className="px-3 py-2 bg-slate-100 border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 text-slate-500 text-[11px] font-black rounded-xl transition shadow-sm">Exit 🚪</button>
         </div>
       </nav>
 
-      {/* Main Grid Workspace */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
-        
-        {/* Left Side Panel Cockpit Controls */}
-        <div className="md:col-span-1 space-y-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md space-y-5">
-            <div>
-              <h3 className="font-black tracking-wider text-xs uppercase text-indigo-900">Choose Your Game Mode!</h3>
-              <p className="text-[11px] text-slate-500 mt-1 font-medium">Pick what you want the Space Tiger to do with your study files:</p>
+      {isVaultOpen && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white border-4 border-indigo-600 w-full max-w-xl rounded-3xl p-6 shadow-2xl space-y-5 relative">
+            <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+              <div>
+                <h3 className="text-xl font-black text-indigo-950 uppercase tracking-wide">🏅 Astronaut Achievement Vault</h3>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Your progress is securely saved onto your profile footprint parameters locally!</p>
+              </div>
+              <button onClick={() => setIsVaultOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-400">✕</button>
             </div>
-            
-            <div className="flex flex-col gap-2.5">
-              <button type="button" onClick={() => { setActiveTab('notes'); setGeneratedText(''); setStructuredQuiz(null); setFlashcardDeck(null); }} className={getButtonClass('notes')}>📝 MAKE STUDY NOTES</button>
-              <button type="button" onClick={() => { setActiveTab('explainer'); setGeneratedText(''); setStructuredQuiz(null); setFlashcardDeck(null); }} className={getButtonClass('explainer')}>👶 SIMPLE EXPLAINER</button>
-              <button type="button" onClick={() => { setActiveTab('flashcard'); setGeneratedText(''); setStructuredQuiz(null); setFlashcardDeck(null); }} className={getButtonClass('flashcard')}>🎨 FLASHCARD HERO</button>
-              <button type="button" onClick={() => { setActiveTab('quiz'); setGeneratedText(''); setStructuredQuiz(null); setFlashcardDeck(null); }} className={getButtonClass('quiz')}>🧠 PLAY INTERACTIVE QUIZ</button>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-2 max-h-[380px] overflow-y-auto">
+              {[
+                { id: "cadet", label: "Cadet", icon: "🔰", bg: "from-teal-400 to-emerald-500", desc: "Joined flight deck staff.", count: badgeCounts.cadet },
+                { id: "striker", label: "Quiz Striker", icon: "🔥", bg: "from-amber-400 to-orange-500", desc: "Hit correct quiz vectors.", count: badgeCounts.striker },
+                { id: "commander", label: "Commander", icon: "👑", bg: "from-purple-500 to-indigo-600", desc: "Scored 4+ points standard.", count: badgeCounts.commander },
+                { id: "perfect", label: "Perfect Clear", icon: "💎", bg: "from-pink-500 to-rose-600", desc: "Cleared a quiz with 100%.", count: badgeCounts.perfect },
+                { id: "explorer", label: "Triple Launch", icon: "🚀", bg: "from-blue-400 to-indigo-600", desc: "Uploaded 3 visual image files.", count: badgeCounts.explorer },
+                { id: "notetaker", label: "Scribe Master", icon: "📝", bg: "from-yellow-400 to-amber-500", desc: "Generated summary notes map.", count: badgeCounts.notetaker },
+                { id: "explainer", label: "Simple Mind", icon: "👶", bg: "from-cyan-400 to-blue-500", desc: "Requested kid explainer guides.", count: badgeCounts.explainer },
+                { id: "warrior", label: "Space Ranger", icon: "⚔️", bg: "from-red-500 to-orange-600", desc: "Destroyed Arena target anomalies.", count: badgeCounts.warrior },
+              ].map((b, i) => (
+                <div key={i} className={`border-2 rounded-2xl p-3 text-center flex flex-col items-center justify-between relative ${b.count > 0 ? 'border-indigo-100 bg-indigo-50/40 shadow-sm' : 'border-slate-100 bg-white opacity-40 filter grayscale select-none'}`}>
+                  {b.count > 0 && <span className="absolute top-2 right-2 bg-indigo-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full border border-white">x{b.count}</span>}
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl shadow-md border-2 border-white bg-gradient-to-br ${b.count > 0 ? b.bg : 'bg-slate-200'}`}>{b.icon}</div>
+                  <div className="mt-2">
+                    <p className="text-[11px] font-black text-slate-800 uppercase tracking-wide truncate max-w-[100px]">{b.label}</p>
+                    <p className="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">{b.desc}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
+      )}
 
-        {/* Right Sandbox Display Viewport Screen */}
-        <div className="md:col-span-3 flex flex-col min-h-[550px]">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md flex-1 flex flex-col relative overflow-hidden">
+      {/* GAMIFIED LOCK OVERLAY SCREEN WITH VISIBILITY FIXES */}
+      {!subscriptionActive ? (
+        <div className="flex-1 w-full flex items-center justify-center px-4 py-16 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white border-4 border-indigo-600 w-full max-w-xl rounded-3xl p-8 shadow-2xl text-center space-y-6 transform scale-100 transition-all">
+            <span className="text-7xl block animate-bounce select-none">⚡</span>
             
-            <div className="border-b border-slate-200 pb-3 mb-4 flex items-center justify-between">
-              <span className="font-bold text-xs tracking-wider text-slate-400 uppercase">COSMIC_SCREEN.EXE</span>
-              <span className="text-[10px] font-black uppercase bg-slate-50 text-pink-600 px-3 py-1 border border-slate-200 rounded-lg tracking-widest">🪐 CURRENT ROUTE: {activeTab}</span>
+            <h2 className="text-2xl sm:text-3xl font-black text-indigo-950 uppercase tracking-tight">
+              Ready to Power Up Your Learning?
+            </h2>
+            
+            <p className="text-xs sm:text-sm text-slate-600 font-bold max-w-md mx-auto leading-relaxed">
+              Your standard 30-day trial tank has run empty! Unlock your ultimate cosmic upgrade below to teleport directly past boring homework limits.
+            </p>
+
+            <div className="bg-indigo-50/60 border-2 border-indigo-100 rounded-2xl p-5 text-left space-y-3 shadow-inner">
+              <h4 className="text-xs font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">
+                🚀 UNLOCKED SUPER-POWERS INCLUDE:
+              </h4>
+              <ul className="text-xs text-slate-800 font-black space-y-2.5 pl-1">
+                <li className="flex items-center gap-2.5">
+                  <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">📝</span> 
+                  <span>Create Magic Summary Study Notes instantly</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <span className="bg-pink-500 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">👶</span> 
+                  <span>Decode tough topics with Simple Kid Explainers</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <span className="bg-amber-500 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">🎨</span> 
+                  <span>Build custom, hero-themed Flashcard Decks</span>
+                </li>
+                <li className="flex items-center gap-2.5">
+                  <span className="bg-purple-600 text-white text-[10px] w-5 h-5 rounded-md flex items-center justify-center">🧠</span> 
+                  <span>Play Interactive Quizzes & hoard rare Vault Badges</span>
+                </li>
+              </ul>
             </div>
-            
-            {/* Screen Display Area Canvas */}
-            <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-inner overflow-y-auto font-medium text-xs leading-relaxed text-slate-700">
-              {isLoading ? (
-                <div className="h-full w-full flex flex-col items-center justify-center space-y-3 py-16">
-                  <div className="w-12 h-12 border-4 border-t-transparent border-pink-500 rounded-full animate-spin"></div>
-                  <p className="text-xs font-black text-pink-500 uppercase animate-pulse">🛸 Deploying space-tiger micro-agents across system ports...</p>
-                </div>
-              ) : activeTab === 'flashcard' && flashcardDeck ? (
-                
-                /* 🎴 FLASHCARD DECK ENGINE CANVAS */
-                <div className="space-y-6 animate-fade-in font-sans p-2">
-                  <div>
-                    <h2 className="text-xl font-black text-indigo-950 uppercase tracking-wide">🎴 {flashcardDeck.deck_title || "SPACE FLASHCARDS"}</h2>
-                    <p className="text-slate-500 text-[11px] font-bold mt-0.5">Click any transmission card box below to flip the memory matrix around!</p>
+
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+              Securely saves your level accomplishments across devices for the full 30 days cycle!
+            </p>
+
+            <button 
+              onClick={handleExecuteMonthlyPayment}
+              disabled={isPaymentProcessing}
+              className="w-full max-w-md bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 hover:from-indigo-500 hover:to-pink-400 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-xl transition transform active:scale-95 border-b-4 border-indigo-800"
+            >
+              {isPaymentProcessing ? "Engaging Hyperdrive Thrusters..." : "Activate Super-Flight License Mode! 🦁💥"}
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* STANDARD UNLOCKED OPERATION BOX CONTAINER VIEWPORT */
+        <div className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 md:grid-cols-4 gap-6 animate-fadeIn">
+          <div className="md:col-span-1 space-y-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md space-y-5">
+              <div>
+                <h3 className="font-black tracking-wider text-xs uppercase text-indigo-900">Choose Your Game Mode!</h3>
+                <p className="text-[11px] text-slate-500 mt-1 font-medium">Pick what you want the Space Tiger to do with your study files:</p>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <button type="button" onClick={() => setActiveTab('notes')} className={getButtonClass('notes')}>📝 MAKE STUDY NOTES</button>
+                <button type="button" onClick={() => setActiveTab('explainer')} className={getButtonClass('explainer')}>👶 SIMPLE EXPLAINER</button>
+                <button type="button" onClick={() => setActiveTab('flashcard')} className={getButtonClass('flashcard')}>🎨 FLASHCARD HERO</button>
+                <button type="button" onClick={() => setActiveTab('quiz')} className={getButtonClass('quiz')}>🧠 PLAY INTERACTIVE QUIZ</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="md:col-span-3 flex flex-col min-h-[550px]">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-md flex-1 flex flex-col relative overflow-hidden">
+              <div className="border-b border-slate-200 pb-3 mb-4 flex items-center justify-between">
+                <span className="font-bold text-xs tracking-wider text-slate-400 uppercase">COSMIC_SCREEN.EXE</span>
+                <span className="text-[10px] font-black uppercase bg-slate-50 text-pink-600 px-3 py-1 border border-slate-200 rounded-lg tracking-widest">🪐 CURRENT ROUTE: {activeTab}</span>
+              </div>
+              
+              <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-5 shadow-inner overflow-y-auto font-medium text-xs leading-relaxed text-slate-700 relative">
+                {isLoading ? (
+                  <div className="h-full w-full flex flex-col items-center justify-center space-y-4 py-16">
+                    <div className="w-48 h-48">
+                      {rocketAnimation ? <Lottie animationData={rocketAnimation} loop={true} /> : <div className="text-6xl animate-bounce">🚀</div>}
+                    </div>
+                    <p className="text-xs font-black text-pink-500 uppercase tracking-widest animate-pulse">PREPARING FOR LIFTOFF...</p>
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
-                    {flashcardDeck.cards.map((card, idx) => {
-                      const isFlipped = !!flippedCards[idx];
-                      return (
+                ) : activeTab === 'flashcard' && flashcardDeck ? (
+                  <div className="space-y-6 font-sans p-2">
+                    <div>
+                      <h2 className="text-xl font-black text-indigo-950 uppercase tracking-wide">🎴 {flashcardDeck.deck_title}</h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                      {flashcardDeck.cards.map((card, idx) => (
                         <div key={idx} onClick={() => toggleCardFlip(idx)} className="h-44 w-full cursor-pointer [perspective:1000px] group">
-                          <div 
-                            style={{ transform: isFlipped ? 'rotateY(180deg)' : 'none', transformStyle: 'preserve-3d' }}
-                            className={`relative h-full w-full rounded-2xl border-2 shadow-sm transition-all duration-500 ${isFlipped ? 'border-indigo-500 bg-indigo-50' : 'bg-white border-slate-200 group-hover:border-indigo-300'}`}
-                          >
+                          <div style={{ transform: flippedCards[idx] ? 'rotateY(180deg)' : 'none', transformStyle: 'preserve-3d' }} className={`relative h-full w-full rounded-2xl border-2 shadow-sm transition-all duration-500 ${flippedCards[idx] ? 'border-indigo-500 bg-indigo-50' : 'bg-white border-slate-200 group-hover:border-indigo-300'}`}>
                             <div className="absolute inset-0 h-full w-full rounded-2xl p-5 bg-white flex flex-col justify-between" style={{ backfaceVisibility: 'hidden' }}>
-                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded self-start">MODULE CLUE KEY {idx + 1}</span>
                               <p className="text-sm font-black text-slate-800 text-center px-2 py-4">{card.front_side}</p>
-                              <span className="text-[9px] font-black text-indigo-500 text-center uppercase animate-pulse">👉 CLICK TO REVEAL DECODED FACT</span>
                             </div>
                             <div className="absolute inset-0 h-full w-full rounded-2xl p-5 bg-indigo-50 flex flex-col justify-between" style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}>
-                              <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2.5 py-0.5 rounded self-start">DECODED DATA TRUTH</span>
-                              <p className="text-xs font-extrabold text-indigo-950 leading-relaxed px-1 text-center py-2 flex-1 flex items-center justify-center">{card.back_side}</p>
-                              <span className="text-[9px] font-black text-indigo-400 text-center uppercase">🎯 CLICK TO RE-LOCK MEMORY CELL</span>
+                              <p className="text-xs font-extrabold text-indigo-950 text-center py-2">{card.back_side}</p>
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-              ) : activeTab === 'quiz' && structuredQuiz ? (
-                
-                <div className="space-y-6 animate-fade-in font-sans p-2">
-                  <div className="border-b-2 border-purple-200 pb-2 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-black text-purple-900 uppercase tracking-wide">🏆 {structuredQuiz.quiz_title}</h2>
-                      <p className="text-slate-500 text-[11px] font-bold mt-0.5">Answer one question at a time to power up your starship boosters!</p>
+                      ))}
                     </div>
-                    {!quizComplete && (
-                      <span className="bg-purple-100 text-purple-800 font-black px-3 py-1.5 rounded-xl border border-purple-200 uppercase tracking-wide text-[10px]">
-                        🚀 Question: {currentQuestionIndex + 1} / {structuredQuiz.questions.length}
-                      </span>
+                  </div>
+                ) : activeTab === 'quiz' && structuredQuiz ? (
+                  <div className="space-y-6 font-sans p-2 select-none">
+                    <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-500 rounded-2xl p-4 text-white shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div>
+                        <h2 className="text-xl font-black uppercase tracking-wide">🏆 {structuredQuiz.quiz_title}</h2>
+                      </div>
+                    </div>
+
+                    {!quizComplete ? (
+                      <div className="bg-white border-2 border-slate-200 p-6 rounded-3xl shadow-sm space-y-5 relative overflow-hidden">
+                        <div className="py-2">
+                          <h4 className="font-black text-base text-slate-800 leading-snug">🐯 Game Prompt: {currentQuestion.question}</h4>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {currentQuestion.options.map((option, optIdx) => {
+                            let cardStateStyle = "bg-slate-50 border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/30 transform hover:-translate-y-0.5";
+                            if (selectedOption === optIdx) cardStateStyle = "bg-indigo-600 border-indigo-700 text-white shadow-md scale-[1.01]";
+                            
+                            if (hasAnsweredCurrent) {
+                              if (optIdx === currentQuestion.correct_answer_index) cardStateStyle = "bg-emerald-500 border-emerald-600 text-white font-black shadow-lg animate-bounce";
+                              else if (selectedOption === optIdx) cardStateStyle = "bg-rose-500 border-rose-600 text-white shadow-lg opacity-80";
+                            }
+                            return (
+                              <button key={optIdx} onClick={() => handleOptionClick(optIdx)} disabled={hasAnsweredCurrent} className={`w-full py-4 px-5 rounded-2xl border-2 text-left text-xs font-black tracking-wide transition-all ${cardStateStyle}`}>
+                                {option}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-end pt-2">
+                          {!hasAnsweredCurrent ? (
+                            <button onClick={() => handleCheckAnswer(currentQuestion.correct_answer_index)} disabled={selectedOption === null} className="bg-indigo-600 hover:bg-pink-600 text-white font-black px-8 py-3.5 rounded-xl uppercase tracking-widest text-xs shadow-md">Lock In Vector 🎯</button>
+                          ) : (
+                            <button onClick={handleNextQuestion} className="bg-purple-600 hover:bg-pink-600 text-white font-black px-8 py-3.5 rounded-xl uppercase tracking-widest text-xs shadow-md">Next Sector 🚀</button>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white border-2 border-slate-200 text-center py-12 px-6 rounded-3xl shadow-md max-w-md mx-auto space-y-5">
+                        <h3 className="text-3xl font-black uppercase tracking-wide">Mission Cleared!</h3>
+                        <button onClick={() => { setStructuredQuiz(null); setQuizComplete(false); }} className="w-full max-w-xs bg-indigo-600 text-white font-black py-4 px-6 rounded-2xl uppercase tracking-widest text-xs shadow-lg">Return to Flight Deck 🐯</button>
+                      </div>
                     )}
                   </div>
-
-                  {!quizComplete ? (
-                    <div className="bg-white border border-slate-200 p-5 rounded-2xl shadow-sm space-y-4 animate-fade-in">
-                      <h4 className="font-black text-sm text-slate-800">🧑‍🚀 Task {currentQuestionIndex + 1}: {currentQuestion.question}</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {currentQuestion.options.map((option, optIdx) => {
-                          const isSelected = selectedOption === optIdx;
-                          const isCorrect = Number(currentQuestion.correct_answer_index) === Number(optIdx);
-                          
-                          let btnStyle = "border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700";
-                          if (isSelected) btnStyle = "bg-purple-600 border-purple-700 text-white shadow-md";
-                          
-                          if (hasAnsweredCurrent) {
-                            if (isCorrect) btnStyle = "bg-emerald-500 border-emerald-600 text-white shadow-sm font-black";
-                            else if (isSelected && !isCorrect) btnStyle = "bg-rose-500 border-rose-600 text-white line-through opacity-70";
-                            else btnStyle = "border-slate-100 bg-slate-50 text-slate-400 opacity-40 cursor-not-allowed";
-                          }
-                          return (
-                            <button
-                              key={optIdx} type="button" onClick={() => handleOptionClick(optIdx)} disabled={hasAnsweredCurrent}
-                              className={`w-full py-3.5 px-4 rounded-xl border-2 text-left text-xs font-bold transition-all transform active:scale-[0.99] flex items-center gap-2 ${btnStyle}`}
-                            >
-                              <span className="bg-black/10 px-2 py-0.5 rounded text-[10px] font-black uppercase">{String.fromCharCode(65 + optIdx)}</span>
-                              <span>{option}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100 flex justify-end">
-                        {!hasAnsweredCurrent ? (
-                          <button
-                            type="button" onClick={() => handleCheckAnswer(currentQuestion.correct_answer_index)} disabled={selectedOption === null}
-                            className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-200 text-white disabled:text-slate-400 font-black px-6 py-3 rounded-xl tracking-widest text-[10px] uppercase transition shadow-md"
-                          >
-                            VERIFY LAUNCH SELECTION 🎯
-                          </button>
-                        ) : (
-                          <button
-                            type="button" onClick={handleNextQuestion}
-                            className="bg-purple-600 hover:bg-purple-500 text-white font-black px-6 py-3 rounded-xl tracking-widest text-[10px] uppercase transition shadow-md"
-                          >
-                            {currentQuestionIndex + 1 === structuredQuiz.questions.length ? "FINALIZE RECONCILIATION 🏁" : "UNLOCK NEXT TELEMETRY CONTAINER ➡️"}
-                          </button>
-                        )}
-                      </div>
-
-                      {hasAnsweredCurrent && (
-                        <div className="mt-3 p-4 rounded-xl border animate-fade-in font-sans space-y-2 bg-white shadow-sm">
-                          {Number(selectedOption) === Number(currentQuestion.correct_answer_index) ? (
-                            <div className="flex items-center gap-2 text-emerald-600 font-black text-sm uppercase tracking-wide">🎉 CORRECT! Excellent tracking cadet!</div>
-                          ) : (
-                            <div className="space-y-1">
-                              <div className="text-rose-600 font-black text-sm uppercase tracking-wide">❌ OOPS, WRONG CHOICE!</div>
-                              <p className="text-[11px] font-bold text-slate-600">Right answer was option <strong className="text-emerald-500">{String.fromCharCode(65 + currentQuestion.correct_answer_index)}: "{currentQuestion.options[currentQuestion.correct_answer_index]}"</strong>!</p>
-                            </div>
-                          )}
-                          <div className="text-[11px] font-bold text-purple-950 pt-2 border-t border-slate-100 leading-relaxed">⭐ <strong>Space Tiger Insights:</strong> {currentQuestion.explanation}</div>
-                        </div>
-                      )}
+                ) : generatedText ? (
+                  <div className="space-y-4 font-sans p-2">
+                    <div className="flex justify-end py-1.5 border-b border-slate-200 mb-2">
+                      <button onClick={handleDownloadPDF} className="bg-indigo-600 text-white text-[10px] font-black px-4 py-2 rounded-xl shadow-md uppercase tracking-widest">📥 Download PDF</button>
                     </div>
-                  ) : (
-                    <div className="space-y-6 animate-scale-up text-center font-sans max-w-xl mx-auto py-4 relative">
-                      <div className="absolute top-0 left-0 right-0 h-16 overflow-hidden flex justify-around pointer-events-none text-xl opacity-40 select-none animate-pulse">
-                        <span>✨</span><span>⭐</span><span>🚀</span><span>✨</span><span>🎉</span>
-                      </div>
-
-                      {score === structuredQuiz.questions.length ? (
-                        <div className="p-6 bg-gradient-to-br from-amber-400 via-yellow-500 to-orange-500 text-white border-4 border-yellow-200 shadow-xl rounded-2xl space-y-3 relative overflow-hidden">
-                          <span className="text-6xl block drop-shadow-md animate-bounce">🚀</span>
-                          <h3 className="text-xl font-black tracking-widest uppercase">NEBULA ADVENTURER RANK UNLOCKED!</h3>
-                          <p className="text-xs font-extrabold text-amber-950 max-w-sm mx-auto leading-normal">Incredible pilot work! You secured a flawless score of {score}/{structuredQuiz.questions.length} blocks, stabilizing fuel tanks perfectly!</p>
-                          <span className="inline-block px-4 py-1 bg-white text-yellow-600 font-black text-[10px] rounded-full uppercase tracking-wider shadow">GOLDEN BADGE ACCREDITED 🏅</span>
-                        </div>
-                      ) : score > 0 ? (
-                        <div className="p-6 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 text-white border-4 border-purple-200 shadow-xl rounded-2xl space-y-3">
-                          <span className="text-6xl block animate-pulse">🛰️</span>
-                          <h3 className="text-xl font-black tracking-widest uppercase">STAR CADET IN TRAINING!</h3>
-                          <p className="text-xs font-extrabold text-purple-950 max-w-sm mx-auto leading-normal">Booster engines generated {score} successful energy grid blocks! Keep practicing!</p>
-                          <span className="inline-block px-4 py-1 bg-purple-950/40 text-purple-100 font-black text-[10px] rounded-full uppercase tracking-wider">SILVER BADGE LOCKED IN 🥈</span>
-                        </div>
-                      ) : (
-                        <div className="p-6 bg-gradient-to-br from-slate-600 to-slate-800 text-white border-4 border-slate-500 shadow-xl rounded-2xl space-y-3">
-                          <span className="text-6xl block">🛠️</span>
-                          <h3 className="text-xl font-black tracking-widest uppercase">SHIP MECHANIC REPAIR STATUS</h3>
-                          <p className="text-xs font-extrabold text-slate-300 max-w-sm mx-auto leading-normal">Let's flip back into our textbook notes page layout and study with the Space Tiger again!</p>
-                          <span className="inline-block px-4 py-1 bg-slate-900 text-slate-400 font-black text-[10px] rounded-full uppercase tracking-wider">MAINTENANCE DECK INITIALIZED 🔧</span>
-                        </div>
-                      )}
-
-                      <div className="space-y-3 text-left pt-2">
-                        <h4 className="font-black text-xs uppercase text-slate-400 tracking-wider">Mission Log Analytics:</h4>
-                        {structuredQuiz.questions.map((q, qIdx) => {
-                          const savedUserChoiceIdx = userAnswersHistory[qIdx];
-                          const correctIdx = q.correct_answer_index;
-                          const wasRight = Number(savedUserChoiceIdx) === Number(correctIdx);
-                          return (
-                            <div key={qIdx} className="bg-white border-2 border-slate-200 p-4 rounded-2xl shadow-sm space-y-2">
-                              <div className="flex items-start justify-between gap-4">
-                                <h4 className="font-black text-xs text-slate-800">❓ Task {qIdx + 1}: {q.question}</h4>
-                                <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-md text-white shrink-0 ${wasRight ? 'bg-emerald-500' : 'bg-rose-500'}`}>{wasRight ? '✓ SECURED' : '✗ OVERRIDE'}</span>
-                              </div>
-                              <div className="text-[11px] font-bold space-y-1 pt-1 text-slate-600 border-t border-dashed border-slate-100">
-                                <p>Input Code: <span className={wasRight ? 'text-emerald-600' : 'text-rose-500'}>({String.fromCharCode(65 + savedUserChoiceIdx)}) {q.options[savedUserChoiceIdx]}</span></p>
-                                {!wasRight && <p>Ground Truth Code: <span className="text-emerald-600">({String.fromCharCode(65 + correctIdx)}) {q.options[correctIdx]}</span></p>}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="pt-2"><button type="button" onClick={() => { setStructuredQuiz(null); setGeneratedText(''); }} className="bg-indigo-600 hover:bg-indigo-500 text-white font-black px-6 py-3 rounded-xl text-[10px] uppercase tracking-widest transition shadow-md">Clear Deck for New Mission</button></div>
+                    <div id="pdf-printable-area" className="space-y-3">
+                      {generatedText.split('\n').map((line, i) => {
+                        if (line.startsWith('##')) return <h5 key={i} className="text-purple-700 font-extrabold text-xs mt-3 pl-2 border-l-2 border-indigo-400 uppercase">{line.replace(/##/g, '').trim()}</h5>;
+                        if (line.startsWith('#')) return <h4 key={i} className="text-indigo-900 font-black text-sm mt-5 border-b border-slate-200 pb-1 uppercase">{line.replace(/#/g, '').trim()}</h4>;
+                        return <p key={i} className="my-1 font-bold text-slate-500 pl-1">{line}</p>;
+                      })}
                     </div>
-                  )}
-                </div>
-
-              ) : generatedText ? (
-                <div className="space-y-3 text-slate-700 font-sans p-2 animate-fade-in">
-                  {generatedText.split('\n').map((line, i) => {
-                    if (line.startsWith('#')) return <h4 key={i} className="text-indigo-900 font-black text-sm mt-4 border-b border-slate-200 pb-1 uppercase tracking-wide">{line.replace(/#/g, '').trim()}</h4>;
-                    if (line.startsWith('*')) return <p key={i} className="pl-3 border-l-2 border-pink-500 my-1 font-bold">{line.replace(/\*/g, '').trim()}</p>;
-                    return <p key={i} className="my-1 font-bold text-slate-600 leading-relaxed">{line}</p>;
-                  })}
-                </div>
-              ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center text-slate-400 text-center py-20 select-none">
-                  <span className="text-5xl mb-3 animate-bounce">🐯</span>
-                  <p className="text-sm font-black text-indigo-900 uppercase tracking-widest">Space Tiger Sandbox Terminal</p>
-                  <p className="text-xs max-w-xs mt-2 text-slate-500 font-sans font-bold leading-normal">Drop your textbook photo down into the tray attachment below to see the interactive study wizard magic happen!</p>
-                </div>
-              )}
-            </div>
-
-            {/* Form Input Tray Bar Tools */}
-            <form onSubmit={handleChatSubmit} className="mt-4 space-y-3 font-sans">
-              {attachedFile && (
-                <div className="flex items-center justify-between bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-bold rounded-xl px-3 py-2 shadow-sm max-w-xs animate-fade-in">
-                  <span className="truncate">📸 {attachedFile.name}</span>
-                  <button type="button" onClick={removeAttachedFile} className="ml-2 font-black text-slate-400 hover:text-red-500">✕</button>
-                </div>
-              )}
-
-              <div className="flex items-center bg-white border-2 border-slate-200 focus-within:border-indigo-500 rounded-xl p-2 gap-2 transition-all duration-300">
-                <label className="p-3 bg-slate-50 border border-slate-200 hover:bg-pink-50 rounded-xl cursor-pointer text-slate-500 flex items-center justify-center text-base shadow-sm active:scale-90" title="Upload an Image!">
-                  📎<input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                </label>
-                <input 
-                  type="text" className="flex-1 bg-transparent border-none outline-none text-xs text-slate-800 font-bold placeholder-slate-400 px-2"
-                  placeholder={attachedFile ? "Tell the space tiger how to analyze this picture!..." : "Ask your helper friend any school question here!..."}
-                  value={userQuery} onChange={(e) => setUserQuery(e.target.value)}
-                />
-                <button type="submit" disabled={isLoading || (!userQuery.trim() && !attachedFile)} className="bg-indigo-600 hover:bg-pink-600 disabled:bg-slate-100 text-white font-black p-2.5 px-5 rounded-xl text-xs uppercase tracking-widest transition active:scale-90">LAUNCH! 🚀</button>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center py-20 select-none">
+                    <span className="text-5xl mb-3">🐯</span>
+                    <p className="text-sm font-black text-indigo-900 uppercase">Space Tiger Sandbox Terminal</p>
+                  </div>
+                )}
               </div>
-            </form>
 
+              <form onSubmit={handleChatSubmit} className="mt-4 space-y-3 font-sans">
+                {attachedFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {attachedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center bg-indigo-50 border border-indigo-100 text-indigo-700 text-[11px] font-bold rounded-xl px-3 py-2">
+                        <span>📸 {file.name}</span>
+                        <button type="button" onClick={() => removeAttachedFile(idx)} className="ml-2 font-black text-slate-400">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center bg-white border-2 border-slate-200 focus-within:border-indigo-500 rounded-xl p-2 gap-2">
+                  <label className="p-3 bg-slate-50 border border-slate-200 hover:bg-pink-50 rounded-xl cursor-pointer shadow-sm">
+                    📎<input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+                  </label>
+                  <input type="text" className="flex-1 bg-transparent border-none outline-none text-xs text-slate-800 font-bold px-2" placeholder="Ask your Space-Tiger a question..." value={userQuery} onChange={(e) => setUserQuery(e.target.value)} />
+                  <button type="submit" disabled={isLoading || (!userQuery.trim() && attachedFiles.length === 0)} className="bg-indigo-600 hover:bg-pink-600 text-white font-black p-2.5 px-5 rounded-xl text-xs uppercase tracking-widest">LAUNCH! 🚀</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
-
-      </div>
+      )}
     </div>
   );
 }
